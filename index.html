@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ITSAA | R6 Operator Performance Assessment</title>
+<link rel="preconnect" href="https://lf6-cdn-tos.bytecdntp.com">
+<style>
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('https://lf6-cdn-tos.bytecdntp.com/cdn/expire-100-y/fonts/inter/4.0/Inter.var.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Rajdhani';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('https://lf26-cdn-tos.bytecdntp.com/cdn/expire-100-y/fonts/rajdhani/v15/LDIxapCSOBg7S-QT7pb0EPO1.woff2') format('woff2');
+}
+</style>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+:root {
+    --primary-red: #d82e3f;
+    --primary-blue: #1a5fb4;
+    --dark-bg: #08090d;
+    --panel-bg: rgba(12, 14, 20, 0.93);
+    --nav-bg: rgba(6, 7, 10, 0.96);
+    --card-bg: rgba(18, 21, 29, 0.85);
+    --border-gray: #3a3d45;
+    --light-gray: #5a5e66;
+    --text-primary: #e2e4e9;
+    --text-secondary: #8a8e96;
+    --success-green: #2ecc71;
+    font-size: 16px;
+}
+body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background: var(--dark-bg) url('https://s41.ax1x.com/2026/02/17/pZO6ON4.jpg') center center / cover no-repeat fixed;
+    color: var(--text-primary);
+    font-family: "Inter", "Rajdhani", sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    padding: 70px 15px 40px;
+}
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,9,13,0.92) 0%, rgba(8,9,13,0.88) 50%, rgba(8,9,13,0.92) 100%);
+    z-index: -1;
+}
+body::after {
+    content: "ITSAA CONFIDENTIAL";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 5rem;
+    font-weight: 700;
+    color: rgba(216, 46, 63, 0.03);
+    white-space: nowrap;
+    z-index: 0;
+    pointer-events: none;
+}
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--primary-red);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 99;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.8);
+}
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.follow-btn {
+    background: transparent;
+    border: 1px solid var(--border-gray);
+    color: var(--text-primary);
+    padding: 10px 18px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 3px solid var(--primary-red);
+    min-height: 40px;
+    touch-action: manipulation;
+}
+.pay-btn {
+    background: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 40px;
+    touch-action: manipulation;
+}
+.follow-btn:hover, .follow-btn:active {
+    background: var(--primary-red);
+    border-color: var(--primary-red);
+    box-shadow: 0 0 15px rgba(216, 46, 63, 0.25);
+    transform: translateX(3px);
+}
+.pay-btn:hover, .pay-btn:active {
+    background: #154a90;
+    border-color: #154a90;
+    box-shadow: 0 0 15px rgba(26, 95, 180, 0.25);
+}
+.nav-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    max-width: 50%;
+}
+.nav-brand .main {
+    font-size: 0.7rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.nav-brand .sub {
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--light-gray);
+}
+.access-info {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.65rem;
+    color: var(--light-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.access-info .tag {
+    padding: 3px 8px;
+    background: rgba(216, 46, 63, 0.1);
+    border: 1px solid rgba(216, 46, 63, 0.3);
+    border-radius: 2px;
+}
+.home-intro {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 30px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gray);
+    padding: 30px 25px;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+.intro-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+.intro-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    margin-bottom: 10px;
+    letter-spacing: 1.5px;
+}
+.intro-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.4;
+}
+.auth-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.auth-item {
+    background: var(--card-bg);
+    padding: 12px 15px;
+    border-left: 3px solid var(--primary-red);
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.process-section {
+    margin-bottom: 25px;
+}
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-gray);
+}
+.process-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+.process-item {
+    background: var(--card-bg);
+    padding: 15px 12px;
+    text-align: center;
+    border: 1px solid var(--border-gray);
+    transition: all 0.3s ease;
+}
+.process-item:hover {
+    border-color: var(--primary-red);
+}
+.process-step {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    margin-bottom: 8px;
+}
+.process-name {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+.process-time {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+}
+.team-item {
+    background: var(--card-bg);
+    padding: 15px 12px;
+    border: 1px solid var(--border-gray);
+}
+.team-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+.team-title {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.team-desc {
+    font-size: 0.65rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+.main-panel {
+    width: 100%;
+    max-width: 580px;
+    margin: 0 auto 30px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gray);
+    padding: 35px 25px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9), 0 0 0 1px rgba(216,46,63,0.12);
+    position: relative;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+}
+.panel-corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--primary-red);
+}
+.corner-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.corner-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.corner-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.corner-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+.panel-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.agency-title {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+.main-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    line-height: 1.2;
+    margin-bottom: 6px;
+}
+.title-desc {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    line-height: 1.3;
+}
+.query-area {
+    margin-bottom: 20px;
+}
+.query-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: block;
+}
+.query-input {
+    width: 100%;
+    background: #0f1117;
+    border: 1px solid var(--border-gray);
+    padding: 14px 15px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    outline: none;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+    min-height: 48px;
+    touch-action: manipulation;
+}
+.query-input:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 12px rgba(216, 46, 63, 0.15);
+}
+.query-btn {
+    width: 100%;
+    background: var(--primary-red);
+    border: none;
+    padding: 14px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 48px;
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+}
+.query-btn:hover, .query-btn:active {
+    background: #b82432;
+    box-shadow: 0 0 20px rgba(216, 46, 63, 0.3);
+}
+.query-btn:disabled {
+    background: var(--border-gray);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.query-btn .loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.report-content {
+    display: none;
+    margin-top: 30px;
+    border-top: 1px solid var(--border-gray);
+    padding-top: 25px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+.report-content::-webkit-scrollbar {
+    width: 3px;
+}
+.report-content::-webkit-scrollbar-thumb {
+    background: var(--primary-red);
+    border-radius: 2px;
+}
+.report-content::-webkit-scrollbar-track {
+    background: #0f1117;
+}
+.report-section {
+    margin-bottom: 22px;
+}
+.report-section .section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    border-left: 3px solid var(--primary-red);
+    padding-left: 10px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    line-height: 1.3;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+    font-size: 0.7rem;
+    margin-bottom: 10px;
+}
+.grid-label {
+    color: var(--text-secondary);
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+.grid-value {
+    line-height: 1.3;
+    word-break: break-all;
+    color: var(--text-primary);
+}
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 10px;
+}
+.data-table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    background: #0f1117;
+    font-size: 0.65rem;
+}
+.data-table th {
+    background: var(--primary-red);
+    color: #fff;
+    padding: 8px 6px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.data-table td {
+    border: 1px solid var(--border-gray);
+    padding: 7px 6px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+.report-footer {
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-gray);
+    font-size: 0.55rem;
+    color: var(--light-gray);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    line-height: 1.4;
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+    <div class="nav-left">
+        <button class="follow-btn" id="followBtn">FOLLOW US</button>
+        <button class="pay-btn" id="payBtn">Purchase Test Service</button>
+    </div>
+    <div class="nav-brand">
+        <div class="main">INTERNATIONAL TACTICAL SHOOTING ASSESSMENT ASSOCIATION</div>
+        <div class="sub">R6 OPERATOR PERFORMANCE DIVISION | VER. 4.2.0</div>
+    </div>
+</div>
+
+<div class="access-info">
+    <div class="ip">ACCESS IP: <span>192.168.***.***</span></div>
+    <div class="region">CURRENT REGION: <span class="tag">CHINESE MAINLAND</span></div>
+    <div class="time">ACCESS TIME: <span id="time"></span></div>
+    <div class="log">LOG ID: <span>ITSAA-782491</span></div>
+</div>
+
+<div class="home-intro">
+    <div class="panel-corner corner-tl"></div>
+    <div class="panel-corner corner-tr"></div>
+    <div class="panel-corner corner-bl"></div>
+    <div class="panel-corner corner-br"></div>
+    <div class="intro-header">
+        <h1 class="intro-title">INTERNATIONAL TACTICAL SHOOTING ASSESSMENT ASSOCIATION</h1>
+        <p class="intro-subtitle">Official Data Partner of Rainbow Six Siege Esports | NATO Tactical Training Standard Co-Developer</p>
+    </div>
+    <div class="auth-list">
+        <div class="auth-item">Ubisoft Rainbow Six Pro League Official Certified</div>
+        <div class="auth-item">NATO Tactical Shooting Training Partner</div>
+        <div class="auth-item">International eSports Federation Certified</div>
+        <div class="auth-item">12+ Years Professional Shooting Assessment</div>
+    </div>
+
+    <div class="process-section">
+        <h2 class="section-title">Standardized Professional Test Process</h2>
+        <div class="process-grid">
+            <div class="process-item">
+                <div class="process-step">01</div>
+                <div class="process-name">Application & Qualification Review</div>
+                <div class="process-time">Within 24 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">02</div>
+                <div class="process-name">Test Environment Standardization</div>
+                <div class="process-time">2 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">03</div>
+                <div class="process-name">Multi-Dimension Shooting Test</div>
+                <div class="process-time">4-8 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">04</div>
+                <div class="process-name">Data Calibration & Analysis</div>
+                <div class="process-time">24 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">05</div>
+                <div class="process-name">Professional Review & Rating</div>
+                <div class="process-time">12 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">06</div>
+                <div class="process-name">Report Delivery & Guidance</div>
+                <div class="process-time">Within 1 Hour</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="process-section">
+        <h2 class="section-title">Professional Test Team</h2>
+        <div class="team-grid">
+            <div class="team-item">
+                <div class="team-name">Col. James Morrison</div>
+                <div class="team-title">Former NATO Tactical Shooting Instructor</div>
+                <div class="team-desc">20+ years of tactical shooting training experience, responsible for the formulation of the association's test standards</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Jason "Beaulo" Doty</div>
+                <div class="team-title">Former Rainbow Six Pro League Champion</div>
+                <div class="team-desc">Top professional player in R6 history, responsible for professional scenario test design and player ability rating</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Dr. Emma Wilson</div>
+                <div class="team-title">IeSF Certified Esports Data Analyst</div>
+                <div class="team-desc">PhD in Sports Biomechanics, responsible for shooting data calibration and professional analysis</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Ryan "Fultz" Fultz</div>
+                <div class="team-title">Former US Army Ranger Sniper</div>
+                <div class="team-desc">10+ years of long-range shooting experience, responsible for static and dynamic target test standard setting</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main-panel">
+    <div class="panel-corner corner-tl"></div>
+    <div class="panel-corner corner-tr"></div>
+    <div class="panel-corner corner-bl"></div>
+    <div class="panel-corner corner-br"></div>
+    <div class="panel-header">
+        <p class="agency-title">ITSAA OFFICIAL DATABASE</p>
+        <h1 class="main-title">RAINBOW SIX SIEGE</h1>
+        <p class="title-desc">OPERATOR TACTICAL PERFORMANCE REPORT SYSTEM</p>
+    </div>
+    <div class="query-area">
+        <label class="query-label">ENTER REPORT VERIFICATION CODE</label>
+        <input type="text" class="query-input" id="reportCode" placeholder="ENTER CODE" maxlength="20">
+        <button class="query-btn" id="queryBtn">
+            <span class="btn-text">ACCESS REPORT</span>
+            <span class="loading"></span>
+        </button>
+    </div>
+    <div class="report-content" id="reportContent">
+        <div class="report-section">
+            <div class="section-title">Report Basic Information</div>
+            <div class="info-grid">
+                <div class="grid-label">Report Code</div><div>3084</div>
+                <div class="grid-label">Test Game</div><div>Rainbow Six Siege</div>
+                <div class="grid-label">Test Env</div><div>In-Game Standard Firing Range</div>
+                <div class="grid-label">Test Date</div><div id="reportDate"></div>
+                <div class="grid-label">Core Style</div><div>Static Pre-Aim, 1-2 Shot Burst</div>
+                <div class="grid-label">Physique Adapt</div><div>High Nerve Sensitivity, State Fluctuation</div>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-title">Static Weapon Performance Data</div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <tr><th>Weapon</th><th>Type</th><th>Total Kills</th><th>Accuracy</th><th>First Shot Hit Rate</th><th>HS Rate</th><th>Final Rating</th><th>Industry Reference</th></tr>
+                    <tr><td>K1A</td><td>AR</td><td>49</td><td>39.0%</td><td>92.0%</td><td>63.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>M12</td><td>SMG</td><td>43</td><td>50.0%</td><td>88.0%</td><td>62.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>ACS12 (Slug)</td><td>SHOTGUN</td><td>42</td><td>50.0%</td><td>95.0%</td><td>61.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>F2</td><td>AR</td><td>44</td><td>42.0%</td><td>90.0%</td><td>52.0%</td><td>B</td><td>Casual Excellent</td></tr>
+                    <tr><td>SMG-11</td><td>SMG</td><td>41</td><td>32.0%</td><td>85.0%</td><td>58.0%</td><td>B</td><td>Casual Excellent</td></tr>
+                    <tr><td>M590A1</td><td>SHOTGUN</td><td>44</td><td>45.0%</td><td>82.0%</td><td>34.0%</td><td>B</td><td>Casual Qualified</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-title">Moving Target Combat Data</div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <tr><th>Weapon</th><th>Type</th><th>Total Kills</th><th>Accuracy</th><th>TTK</th><th>HS Rate</th><th>Final Rating</th><th>Industry Reference</th></tr>
+                    <tr><td>F2</td><td>AR</td><td>31</td><td>46.0%</td><td>210ms</td><td>92.0%</td><td>A</td><td>Pro Entry Level</td></tr>
+                    <tr><td>ACS12 (Slug)</td><td>SHOTGUN</td><td>30</td><td>68.0%</td><td>180ms</td><td>93.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>M12</td><td>SMG</td><td>30</td><td>40.0%</td><td>230ms</td><td>90.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>K1A</td><td>AR</td><td>38</td><td>31.0%</td><td>240ms</td><td>52.0%</td><td>B</td><td>Casual Excellent</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-title">Endurance & Stability Test</div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <tr><th>Test Condition</th><th>Duration</th><th>Total Kills</th><th>Continuous Stability</th><th>HS Rate</th><th>Final Rating</th><th>Industry Reference</th></tr>
+                    <tr><td>Main Weapon, Manual Reload</td><td>120s</td><td>56</td><td>89.0%</td><td>80.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-title">Core Ability Rating</div>
+            <div class="info-grid">
+                <div class="grid-label">Headline Control</div><div>A (Pro Entry Level)</div>
+                <div class="grid-label">Weapon Adaptability</div><div>B+ (Amateur Elite)</div>
+                <div class="grid-label">Endurance Stability</div><div>B (Casual Excellent)</div>
+                <div class="grid-label">Combat Adaptability</div><div>B+ (Amateur Elite)</div>
+                <div class="grid-label">Error Tolerance</div><div>B (Casual Excellent)</div>
+                <div class="grid-label">Final Position</div><div>Top Tier Static Anchor</div>
+            </div>
+        </div>
+
+        <div class="report-footer">
+            THIS DOCUMENT CONTAINS CONFIDENTIAL INFORMATION OF ITSAA<br>
+            UNAUTHORIZED ACCESS, COPYING, OR DISTRIBUTION IS PROHIBITED AND WILL BE PROSECUTED<br>
+            © 2026 INTERNATIONAL TACTICAL SHOOTING ASSESSMENT ASSOCIATION. ALL RIGHTS RESERVED.
+        </div>
+    </div>
+</div>
+
+<script>
+// 时间格式化
+function formatTime(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// 初始化页面时间
+const now = new Date();
+document.getElementById('time').textContent = formatTime(now);
+document.getElementById('reportDate').textContent = formatTime(now);
+
+// 核心元素获取
+const reportCode = document.getElementById('reportCode');
+const queryBtn = document.getElementById('queryBtn');
+const btnText = queryBtn.querySelector('.btn-text');
+const btnLoading = queryBtn.querySelector('.loading');
+const reportContent = document.getElementById('reportContent');
+
+// 固定验证码
+const ADMIN_CODE = "3084";
+
+// 核心查询功能
+queryBtn.addEventListener('click', () => {
+    const inputCode = reportCode.value.trim();
+    
+    // 加载动画
+    queryBtn.disabled = true;
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'block';
+
+    // 1.5秒延迟模拟校验
+    setTimeout(() => {
+        if (inputCode === ADMIN_CODE) {
+            // 验证码正确，显示报告
+            reportContent.style.display = 'block';
+            reportContent.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            // 验证码错误，弹出提示
+            alert('VERIFICATION FAILED: Invalid code. Please check and try again.');
+            reportContent.style.display = 'none';
+        }
+        // 恢复按钮状态
+        queryBtn.disabled = false;
+        btnText.style.display = 'block';
+        btnLoading.style.display = 'none';
+    }, 1500);
+});
+
+// 回车触发查询
+reportCode.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') queryBtn.click();
+});
+
+// 禁用右键、F12防穿帮
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F12') e.preventDefault();
+    if (e.ctrlKey && (e.shiftKey && e.key === 'I' || e.key === 'U' || e.key === 'S')) e.preventDefault();
+});
+</script>
+</body>
+</html>
