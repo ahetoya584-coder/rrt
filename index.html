@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ITSAA | R6 Operator Performance Assessment</title>
+<!-- 替换国内可加载字体，无阻塞 -->
+<link rel="preconnect" href="https://lf6-cdn-tos.bytecdntp.com">
+<style>
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('https://lf6-cdn-tos.bytecdntp.com/cdn/expire-100-y/fonts/inter/4.0/Inter.var.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Rajdhani';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('https://lf26-cdn-tos.bytecdntp.com/cdn/expire-100-y/fonts/rajdhani/v15/LDIxapCSOBg7S-QT7pb0EPO1.woff2') format('woff2');
+}
+</style>
+<style>
+/* 全局基础规范 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-red: #d82e3f;
+    --primary-blue: #1a5fb4;
+    --dark-bg: #08090d;
+    --panel-bg: rgba(12, 14, 20, 0.93);
+    --nav-bg: rgba(6, 7, 10, 0.96);
+    --card-bg: rgba(18, 21, 29, 0.85);
+    --border-gray: #3a3d45;
+    --light-gray: #5a5e66;
+    --text-primary: #e2e4e9;
+    --text-secondary: #8a8e96;
+    --success-green: #2ecc71;
+    font-size: 16px;
+}
+
+/* 禁用文本选择，防穿帮 */
+body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 背景层：完整显示原图+全屏填充，核心内容不裁切 */
+body {
+    background: var(--dark-bg) url('https://s41.ax1x.com/2026/02/17/pZO6ON4.jpg') center center / cover no-repeat fixed;
+    color: var(--text-primary);
+    font-family: "Inter", "Rajdhani", sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    padding: 70px 15px 40px;
+}
+
+/* 背景渐变遮罩，保证文字清晰 */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8,9,13,0.92) 0%, rgba(8,9,13,0.88) 50%, rgba(8,9,13,0.92) 100%);
+    z-index: -1;
+}
+
+/* 页面保密水印 */
+body::after {
+    content: "ITSAA CONFIDENTIAL";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 5rem;
+    font-weight: 700;
+    color: rgba(216, 46, 63, 0.03);
+    white-space: nowrap;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* 1. 顶部通栏导航 - 左上角FOLLOW US+付费入口固定，双端适配 */
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--primary-red);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 99;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.8);
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 左上角FOLLOW US按钮 - 触屏优化 */
+.follow-btn {
+    background: transparent;
+    border: 1px solid var(--border-gray);
+    color: var(--text-primary);
+    padding: 10px 18px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 3px solid var(--primary-red);
+    min-height: 40px;
+    touch-action: manipulation;
+}
+
+.pay-btn {
+    background: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 40px;
+    touch-action: manipulation;
+}
+
+.follow-btn:hover, .follow-btn:active {
+    background: var(--primary-red);
+    border-color: var(--primary-red);
+    box-shadow: 0 0 15px rgba(216, 46, 63, 0.25);
+    transform: translateX(3px);
+}
+
+.pay-btn:hover, .pay-btn:active {
+    background: #154a90;
+    border-color: #154a90;
+    box-shadow: 0 0 15px rgba(26, 95, 180, 0.25);
+}
+
+/* 右上角机构信息 - 双端适配 */
+.nav-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    max-width: 50%;
+}
+.nav-brand .main {
+    font-size: 0.7rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.nav-brand .sub {
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--light-gray);
+}
+
+/* 2. 访问信息栏 - 提升真实感，IP检测联动 */
+.access-info {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.65rem;
+    color: var(--light-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.access-info .tag {
+    padding: 3px 8px;
+    background: rgba(216, 46, 63, 0.1);
+    border: 1px solid rgba(216, 46, 63, 0.3);
+    border-radius: 2px;
+}
+
+/* 3. 主页机构介绍模块 - 权威性打造 */
+.home-intro {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 30px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gray);
+    padding: 30px 25px;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+.intro-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+.intro-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    margin-bottom: 10px;
+    letter-spacing: 1.5px;
+}
+.intro-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.4;
+}
+.auth-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.auth-item {
+    background: var(--card-bg);
+    padding: 12px 15px;
+    border-left: 3px solid var(--primary-red);
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* 测试流程模块 */
+.process-section {
+    margin-bottom: 25px;
+}
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-gray);
+}
+.process-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+.process-item {
+    background: var(--card-bg);
+    padding: 15px 12px;
+    text-align: center;
+    border: 1px solid var(--border-gray);
+    transition: all 0.3s ease;
+}
+.process-item:hover {
+    border-color: var(--primary-red);
+}
+.process-step {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    margin-bottom: 8px;
+}
+.process-name {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+.process-time {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* 测试团队模块 */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+}
+.team-item {
+    background: var(--card-bg);
+    padding: 15px 12px;
+    border: 1px solid var(--border-gray);
+}
+.team-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+.team-title {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.team-desc {
+    font-size: 0.65rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+/* 4. 核心查询面板 - 双端完美适配，分层质感 */
+.main-panel {
+    width: 100%;
+    max-width: 580px;
+    margin: 0 auto 30px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gray);
+    padding: 35px 25px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9), 0 0 0 1px rgba(216,46,63,0.12);
+    position: relative;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+}
+
+/* 军事风格四角装饰 */
+.panel-corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--primary-red);
+}
+.corner-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.corner-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.corner-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.corner-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+/* 面板头部标题 - 层级清晰 */
+.panel-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.agency-title {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+.main-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    line-height: 1.2;
+    margin-bottom: 6px;
+}
+.title-desc {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    line-height: 1.3;
+}
+
+/* 查询输入区域 - 触屏优化 */
+.query-area {
+    margin-bottom: 20px;
+}
+.query-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: block;
+}
+.query-input {
+    width: 100%;
+    background: #0f1117;
+    border: 1px solid var(--border-gray);
+    padding: 14px 15px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    outline: none;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+    min-height: 48px;
+    touch-action: manipulation;
+}
+.query-input:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 12px rgba(216, 46, 63, 0.15);
+}
+.query-btn {
+    width: 100%;
+    background: var(--primary-red);
+    border: none;
+    padding: 14px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 48px;
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+}
+.query-btn:hover, .query-btn:active {
+    background: #b82432;
+    box-shadow: 0 0 20px rgba(216, 46, 63, 0.3);
+}
+.query-btn:disabled {
+    background: var(--border-gray);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 查询加载动画 */
+.query-btn .loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* 报告内容区域 - 双端滚动优化 */
+.report-content {
+    display: none;
+    margin-top: 30px;
+    border-top: 1px solid var(--border-gray);
+    padding-top: 25px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+.report-content::-webkit-scrollbar {
+    width: 3px;
+}
+.report-content::-webkit-scrollbar-thumb {
+    background: var(--primary-red);
+    border-radius: 2px;
+}
+.report-content::-webkit-scrollbar-track {
+    background: #0f1117;
+}
+.report-section {
+    margin-bottom: 22px;
+}
+.report-section .section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    border-left: 3px solid var(--primary-red);
+    padding-left: 10px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    line-height: 1.3;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+    font-size: 0.7rem;
+    margin-bottom: 10px;
+}
+.grid-label {
+    color: var(--text-secondary);
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+.grid-value {
+    line-height: 1.3;
+    word-break: break-all;
+    color: var(--text-primary);
+}
+
+/* 表格横向滚动适配 */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 10px;
+}
+.data-table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    background: #0f1117;
+    font-size: 0.65rem;
+}
+.data-table th {
+    background: var(--primary-red);
+    color: #fff;
+    padding: 8px 6px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.data-table td {
+    border: 1px solid var(--border-gray);
+    padding: 7px 6px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+/* 报告页脚保密声明 */
+.report-footer {
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-gray);
+    font-size: 0.55rem;
+    color: var(--light-gray);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    line-height: 1.4;
+}
+
+/* 5. 全屏遮罩层通用样式 */
+.full-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.92);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.mask-box {
+    width: 100%;
+    max-width: 600px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gray);
+    padding: 30px 25px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.mask-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mask-close:hover {
+    color: var(--primary-red);
+}
+.mask-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+/* 付费套餐面板样式 */
+.package-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.package-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-gray);
+    padding: 20px 15px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.package-card.highlight {
+    border-color: var(--primary-blue);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(26, 95, 180, 0.2);
+}
+.package-card:hover {
+    border-color: var(--primary-red);
+}
+.package-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.package-price {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-red);
+    font-family: "Rajdhani", sans-serif;
+    text-align: center;
+    margin-bottom: 5px;
+}
+.package-price span {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+.package-time {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-gray);
+}
+.package-list {
+    list-style: none;
+    margin-bottom: 20px;
+}
+.package-list li {
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    padding-left: 15px;
+    position: relative;
+    line-height: 1.3;
+}
+.package-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success-green);
+}
+.package-select-btn {
+    width: 100%;
+    background: var(--primary-red);
+    border: none;
+    padding: 10px;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 40px;
+}
+.package-select-btn:hover {
+    background: #b82432;
+}
+.package-card.highlight .package-select-btn {
+    background: var(--primary-blue);
+}
+.package-card.highlight .package-select-btn:hover {
+    background: #154a90;
+}
+
+/* 地区检测提示面板 */
+.region-check-panel {
+    text-align: center;
+    padding: 20px 0;
+}
+.region-warning {
+    font-size: 0.85rem;
+    color: var(--primary-red);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+.region-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+.region-btn-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.region-btn {
+    padding: 10px 20px;
+    min-height: 40px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+.btn-cancel {
+    background: var(--border-gray);
+    color: var(--text-primary);
+}
+.btn-continue {
+    background: var(--primary-blue);
+    color: #fff;
+}
+.btn-cancel:hover {
+    background: #2a2d35;
+}
+.btn-continue:hover {
+    background: #154a90;
+}
+
+/* 支付表单样式 */
+.pay-form {
+    margin-bottom: 20px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: block;
+    letter-spacing: 0.8px;
+}
+.form-input {
+    width: 100%;
+    background: #0f1117;
+    border: 1px solid var(--border-gray);
+    padding: 12px 15px;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    outline: none;
+    transition: all 0.3s ease;
+    min-height: 44px;
+}
+.form-input:focus {
+    border-color: var(--primary-blue);
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.pay-submit-btn {
+    width: 100%;
+    background: var(--primary-blue);
+    border: none;
+    padding: 14px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 48px;
+    margin-top: 10px;
+}
+.pay-submit-btn:hover {
+    background: #154a90;
+}
+.pay-submit-btn:disabled {
+    background: var(--border-gray);
+    cursor: not-allowed;
+}
+
+/* 全屏加载界面 - 优化非机械化波动加载 */
+.full-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #050609;
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+}
+.loading-logo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--primary-red);
+    margin-bottom: 40px;
+    font-family: "Rajdhani", sans-serif;
+    text-align: center;
+    line-height: 1.3;
+}
+.loading-progress-container {
+    width: 100%;
+    max-width: 500px;
+    height: 4px;
+    background: #1a1c22;
+    margin-bottom: 25px;
+    overflow: hidden;
+    border-radius: 2px;
+}
+.loading-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary-red), #ff4757);
+    box-shadow: 0 0 15px var(--primary-red);
+    transition: width 0.4s ease;
+}
+.loading-text {
+    font-size: 0.75rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    min-height: 18px;
+    text-align: center;
+    line-height: 1.3;
+}
+.loading-note {
+    font-size: 0.55rem;
+    color: var(--light-gray);
+    margin-top: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* PC端大屏适配 */
+@media (min-width: 768px) {
+    :root {
+        font-size: 18px;
+    }
+    body {
+        padding: 80px 20px 40px;
+    }
+    .top-nav {
+        padding: 0 30px;
+        height: 65px;
+    }
+    .follow-btn, .pay-btn {
+        font-size: 0.8rem;
+        padding: 8px 22px;
+    }
+    .nav-brand .main {
+        font-size: 0.75rem;
+    }
+    .home-intro {
+        padding: 40px 35px;
+    }
+    .intro-title {
+        font-size: 2.2rem;
+    }
+    .main-panel {
+        padding: 45px 40px;
+    }
+    .main-title {
+        font-size: 1.8rem;
+    }
+    .info-grid {
+        grid-template-columns: 130px 1fr;
+        font-size: 0.75rem;
+    }
+    .loading-logo {
+        font-size: 1.8rem;
+    }
+}
+
+/* 横屏适配 */
+@media (max-height: 500px) and (orientation: landscape) {
+    body {
+        padding: 60px 15px 30px;
+    }
+    .top-nav {
+        height: 50px;
+    }
+    .main-panel {
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+    }
+    .report-content {
+        max-height: 40vh;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部通栏导航 - 左上角FOLLOW US+付费入口固定 -->
+<div class="top-nav">
+    <div class="nav-left">
+        <button class="follow-btn" id="followBtn">FOLLOW US</button>
+        <button class="pay-btn" id="payBtn">Purchase Test Service</button>
+    </div>
+    <div class="nav-brand">
+        <div class="main">INTERNATIONAL TACTICAL SHOOTING ASSESSMENT ASSOCIATION</div>
+        <div class="sub">R6 OPERATOR PERFORMANCE DIVISION | SYSTEM VER. 4.2.0</div>
+    </div>
+</div>
+
+<!-- 访问信息栏 - IP检测联动 -->
+<div class="access-info">
+    <div class="ip">ACCESS IP: <span id="ip">192.168.***.***</span></div>
+    <div class="region">CURRENT REGION: <span id="region" class="tag">CHINESE MAINLAND</span></div>
+    <div class="time">ACCESS TIME: <span id="time"></span></div>
+    <div class="log">LOG ID: <span id="logId">ITSAA-782491</span></div>
+</div>
+
+<!-- 主页机构介绍模块 -->
+<div class="home-intro">
+    <div class="panel-corner corner-tl"></div>
+    <div class="panel-corner corner-tr"></div>
+    <div class="panel-corner corner-bl"></div>
+    <div class="panel-corner corner-br"></div>
+
+    <div class="intro-header">
+        <h1 class="intro-title">INTERNATIONAL TACTICAL SHOOTING ASSESSMENT ASSOCIATION</h1>
+        <p class="intro-subtitle">Official Data Partner of Rainbow Six Siege Esports | NATO Special Forces Tactical Training Standard Co-Developer | IeSF Certified Shooting Test Institution</p>
+    </div>
+
+    <div class="auth-list">
+        <div class="auth-item">Ubisoft Rainbow Six Pro League Official Certified</div>
+        <div class="auth-item">NATO Tactical Shooting Training Partner</div>
+        <div class="auth-item">International eSports Federation Certified</div>
+        <div class="auth-item">12+ Years Professional Shooting Assessment Experience</div>
+    </div>
+
+    <div class="process-section">
+        <h2 class="section-title">Standardized Professional Test Process</h2>
+        <div class="process-grid">
+            <div class="process-item">
+                <div class="process-step">01</div>
+                <div class="process-name">Application & Qualification Review</div>
+                <div class="process-time">Within 24 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">02</div>
+                <div class="process-name">Test Environment Standardization</div>
+                <div class="process-time">2 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">03</div>
+                <div class="process-name">Multi-Dimension Shooting Test</div>
+                <div class="process-time">4-8 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">04</div>
+                <div class="process-name">Data Calibration & Analysis</div>
+                <div class="process-time">24 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">05</div>
+                <div class="process-name">Professional Review & Rating</div>
+                <div class="process-time">12 Hours</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">06</div>
+                <div class="process-name">Report Delivery & Guidance</div>
+                <div class="process-time">Within 1 Hour</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="process-section">
+        <h2 class="section-title">Professional Test Team</h2>
+        <div class="team-grid">
+            <div class="team-item">
+                <div class="team-name">Col. James Morrison</div>
+                <div class="team-title">Former NATO Tactical Shooting Instructor</div>
+                <div class="team-desc">20+ years of tactical shooting training experience, responsible for the formulation of the association's test standards</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Jason "Beaulo" Doty</div>
+                <div class="team-title">Former Rainbow Six Pro League Champion</div>
+                <div class="team-desc">Top professional player in R6 history, responsible for professional scenario test design and player ability rating</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Dr. Emma Wilson</div>
+                <div class="team-title">IeSF Certified Esports Data Analyst</div>
+                <div class="team-desc">PhD in Sports Biomechanics, responsible for shooting data calibration and professional analysis</div>
+            </div>
+            <div class="team-item">
+                <div class="team-name">Ryan "Fultz" Fultz</div>
+                <div class="team-title">Former US Army Ranger Sniper</div>
+                <div class="team-desc">10+ years of long-range shooting experience, responsible for static and dynamic target test standard setting</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="process-section">
+        <h2 class="section-title">Test Service Pricing</h2>
+        <div class="process-grid">
+            <div class="process-item">
+                <div class="process-step">BASIC</div>
+                <div class="process-name">Static + Moving Target Test</div>
+                <div class="process-time">Delivery Within 48 Hours</div>
+                <div class="process-name" style="color: var(--primary-red); font-weight: 700; margin-top: 8px;">$199 USD</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">PRO</div>
+                <div class="process-name">Full Dimension Ability Test</div>
+                <div class="process-time">Delivery Within 72 Hours</div>
+                <div class="process-name" style="color: var(--primary-red); font-weight: 700; margin-top: 8px;">$499 USD</div>
+            </div>
+            <div class="process-item">
+                <div class="process-step">ELITE</div>
+                <div class="process-name">Custom Test + 1-on-1 Guidance</div>
+                <div class="process-time">Delivery Within 5 Working Days</div>
+                <div class="process-name" style="color: var(--primary-red); font-weight: 700; margin-top: 8px;">$1299 USD</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 核心查询面板 -->
+<div class="main-panel">
+    <div class="panel-corner corner-tl"></div>
+    <div class="panel-corner corner-tr"></div>
+    <div class="panel-corner corner-bl"></div>
+    <div class="panel-corner corner-br"></div>
+
+    <div class="panel-header">
+        <p class="agency-title">ITSAA OFFICIAL DATABASE</p>
+        <h1 class="main-title">RAINBOW SIX SIEGE</h1>
+        <p class="title-desc">OPERATOR TACTICAL PERFORMANCE REPORT SYSTEM</p>
+    </div>
+
+    <div class="query-area">
+        <label class="query-label">ENTER REPORT VERIFICATION CODE</label>
+        <input type="text" class="query-input" id="reportCode" placeholder="ENTER CODE" maxlength="20">
+        <button class="query-btn" id="queryBtn">
+            <span class="btn-text">ACCESS REPORT</span>
+            <span class="loading"></span>
+        </button>
+    </div>
+
+    <!-- 完整专业报告内容 -->
+    <div class="report-content" id="reportContent">
+        <div class="report-section">
+            <div class="section-title">Report Basic Information</div>
+            <div class="info-grid">
+                <div class="grid-label">Report Code</div><div>3084</div>
+                <div class="grid-label">Test Game</div><div>Rainbow Six Siege</div>
+                <div class="grid-label">Test Env</div><div>In-Game Standard Firing Range</div>
+                <div class="grid-label">Test Date</div><div id="reportDate"></div>
+                <div class="grid-label">Core Style</div><div>Static Pre-Aim, 1-2 Shot Burst</div>
+                <div class="grid-label">Physique Adapt</div><div>High Nerve Sensitivity, State Fluctuation</div>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="section-title">Static Weapon Performance Data</div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <tr><th>Weapon</th><th>Type</th><th>Total Kills</th><th>Accuracy</th><th>First Shot Hit Rate</th><th>HS Rate</th><th>Final Rating</th><th>Industry Reference</th></tr>
+                    <tr><td>K1A</td><td>AR</td><td>49</td><td>39.0%</td><td>92.0%</td><td>63.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>M12</td><td>SMG</td><td>43</td><td>50.0%</td><td>88.0%</td><td>62.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>ACS12 (Slug)</td><td>SHOTGUN</td><td>42</td><td>50.0%</td><td>95.0%</td><td>61.0%</td><td>B+</td><td>Amateur Elite</td></tr>
+                    <tr><td>F2</td><td>AR</td><td>44</td><td>42.0%</td><td>90.0%</td><td>52.0%</td><td>B</td><td>Casual Excellent</td></tr>
+                    <tr><td>SMG-11</td><td>SMG</td><td>41</td><td>32.0%</td><td>85.0%</td><td>58.0%</td><td>B</td><td>Casual Excellent</td></tr>
+                    <tr><td>M590A1</td><td>SHOTGUN</td><td>44</td><td>45.0%</td><td>82.0%</td><td>34.0%</td><td>B</td><td>Casual Qualified</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+   
